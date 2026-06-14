@@ -1,0 +1,449 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000100000000000000201A /* PipelineTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000101A /* PipelineTrackerApp.swift */; };
+		AA000100000000000000202A /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000102A /* Models.swift */; };
+		AA000100000000000000203A /* GitLabService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000103A /* GitLabService.swift */; };
+		AA000100000000000000204A /* PipelineMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000104A /* PipelineMonitor.swift */; };
+		AA000100000000000000205A /* MenuContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000105A /* MenuContentView.swift */; };
+		AA000100000000000000206A /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000106A /* SettingsView.swift */; };
+		AA000100000000000000207A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000107A /* NotificationManager.swift */; };
+		AA000100000000000000208A /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000108B /* KeychainService.swift */; };
+		AA000100000000000000209A /* GitHubService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000109B /* GitHubService.swift */; };
+		AA00010000000000000020AA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA00010000000000000010AA /* Assets.xcassets */; };
+		BB000100000000000000201A /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000101A /* MockURLProtocol.swift */; };
+		BB000100000000000000202A /* ModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000102A /* ModelsTests.swift */; };
+		BB000100000000000000203A /* GitLabServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000103A /* GitLabServiceTests.swift */; };
+		BB000100000000000000204A /* GitHubServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000104A /* GitHubServiceTests.swift */; };
+		BB000100000000000000205A /* KeychainServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000105A /* KeychainServiceTests.swift */; };
+		BB000100000000000000206A /* PipelineMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000106A /* PipelineMonitorTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA000100000000000000006A /* PipelineTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PipelineTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000100000000000000101A /* PipelineTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineTrackerApp.swift; sourceTree = "<group>"; };
+		AA000100000000000000102A /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		AA000100000000000000103A /* GitLabService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitLabService.swift; sourceTree = "<group>"; };
+		AA000100000000000000104A /* PipelineMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineMonitor.swift; sourceTree = "<group>"; };
+		AA000100000000000000105A /* MenuContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuContentView.swift; sourceTree = "<group>"; };
+		AA000100000000000000106A /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AA000100000000000000107A /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
+		AA000100000000000000108A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA000100000000000000109A /* PipelineTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PipelineTracker.entitlements; sourceTree = "<group>"; };
+		AA000100000000000000108B /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		AA000100000000000000109B /* GitHubService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubService.swift; sourceTree = "<group>"; };
+		AA00010000000000000010AA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BB000100000000000000006A /* PipelineTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PipelineTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB000100000000000000101A /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
+		BB000100000000000000102A /* ModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsTests.swift; sourceTree = "<group>"; };
+		BB000100000000000000103A /* GitLabServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitLabServiceTests.swift; sourceTree = "<group>"; };
+		BB000100000000000000104A /* GitHubServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubServiceTests.swift; sourceTree = "<group>"; };
+		BB000100000000000000105A /* KeychainServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainServiceTests.swift; sourceTree = "<group>"; };
+		BB000100000000000000106A /* PipelineMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PipelineMonitorTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA000100000000000000302A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB000100000000000000302A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA000100000000000000002A /* root */ = {
+			isa = PBXGroup;
+			children = (
+				AA000100000000000000003A /* PipelineTracker */,
+				BB000100000000000000003B /* PipelineTrackerTests */,
+				AA000100000000000000004A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA000100000000000000003A /* PipelineTracker */ = {
+			isa = PBXGroup;
+			children = (
+				AA000100000000000000101A /* PipelineTrackerApp.swift */,
+				AA000100000000000000102A /* Models.swift */,
+				AA000100000000000000103A /* GitLabService.swift */,
+				AA000100000000000000104A /* PipelineMonitor.swift */,
+				AA000100000000000000105A /* MenuContentView.swift */,
+				AA000100000000000000106A /* SettingsView.swift */,
+				AA000100000000000000107A /* NotificationManager.swift */,
+				AA000100000000000000108A /* Info.plist */,
+				AA000100000000000000109A /* PipelineTracker.entitlements */,
+				AA000100000000000000108B /* KeychainService.swift */,
+				AA000100000000000000109B /* GitHubService.swift */,
+				AA00010000000000000010AA /* Assets.xcassets */,
+			);
+			path = PipelineTracker;
+			sourceTree = "<group>";
+		};
+		BB000100000000000000003B /* PipelineTrackerTests */ = {
+			isa = PBXGroup;
+			children = (
+				BB000100000000000000101A /* MockURLProtocol.swift */,
+				BB000100000000000000102A /* ModelsTests.swift */,
+				BB000100000000000000103A /* GitLabServiceTests.swift */,
+				BB000100000000000000104A /* GitHubServiceTests.swift */,
+				BB000100000000000000105A /* KeychainServiceTests.swift */,
+				BB000100000000000000106A /* PipelineMonitorTests.swift */,
+			);
+			path = PipelineTrackerTests;
+			sourceTree = "<group>";
+		};
+		AA000100000000000000004A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA000100000000000000006A /* PipelineTracker.app */,
+				BB000100000000000000006A /* PipelineTrackerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA000100000000000000005A /* PipelineTracker */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000100000000000000502A /* Build configuration list for PBXNativeTarget "PipelineTracker" */;
+			buildPhases = (
+				AA000100000000000000301A /* Sources */,
+				AA000100000000000000302A /* Frameworks */,
+				AA000100000000000000303A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PipelineTracker;
+			productName = PipelineTracker;
+			productReference = AA000100000000000000006A /* PipelineTracker.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BB000100000000000000005A /* PipelineTrackerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB000100000000000000502A /* Build configuration list for PBXNativeTarget "PipelineTrackerTests" */;
+			buildPhases = (
+				BB000100000000000000301A /* Sources */,
+				BB000100000000000000302A /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PipelineTrackerTests;
+			productName = PipelineTrackerTests;
+			productReference = BB000100000000000000006A /* PipelineTrackerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA000100000000000000001A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					AA000100000000000000005A = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					BB000100000000000000005A = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = AA000100000000000000005A;
+					};
+				};
+			};
+			buildConfigurationList = AA000100000000000000501A /* Build configuration list for PBXProject "PipelineTracker" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA000100000000000000002A;
+			productRefGroup = AA000100000000000000004A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA000100000000000000005A /* PipelineTracker */,
+				BB000100000000000000005A /* PipelineTrackerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA000100000000000000303A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00010000000000000020AA /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA000100000000000000301A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000100000000000000201A /* PipelineTrackerApp.swift in Sources */,
+				AA000100000000000000202A /* Models.swift in Sources */,
+				AA000100000000000000203A /* GitLabService.swift in Sources */,
+				AA000100000000000000204A /* PipelineMonitor.swift in Sources */,
+				AA000100000000000000205A /* MenuContentView.swift in Sources */,
+				AA000100000000000000206A /* SettingsView.swift in Sources */,
+				AA000100000000000000207A /* NotificationManager.swift in Sources */,
+				AA000100000000000000208A /* KeychainService.swift in Sources */,
+				AA000100000000000000209A /* GitHubService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB000100000000000000301A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB000100000000000000201A /* MockURLProtocol.swift in Sources */,
+				BB000100000000000000202A /* ModelsTests.swift in Sources */,
+				BB000100000000000000203A /* GitLabServiceTests.swift in Sources */,
+				BB000100000000000000204A /* GitHubServiceTests.swift in Sources */,
+				BB000100000000000000205A /* KeychainServiceTests.swift in Sources */,
+				BB000100000000000000206A /* PipelineMonitorTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA000100000000000000401A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA000100000000000000402A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		AA000100000000000000403A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PipelineTracker/PipelineTracker.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = PipelineTracker/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kaustubh.pipeline-tracker";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA000100000000000000404A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PipelineTracker/PipelineTracker.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_FILE = PipelineTracker/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kaustubh.pipeline-tracker";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		BB000100000000000000403A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kaustubh.pipeline-tracker-tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PipelineTracker.app/Contents/MacOS/PipelineTracker";
+			};
+			name = Debug;
+		};
+		BB000100000000000000404A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "-";
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.kaustubh.pipeline-tracker-tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PipelineTracker.app/Contents/MacOS/PipelineTracker";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA000100000000000000501A /* Build configuration list for PBXProject "PipelineTracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000100000000000000401A /* Debug */,
+				AA000100000000000000402A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA000100000000000000502A /* Build configuration list for PBXNativeTarget "PipelineTracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA000100000000000000403A /* Debug */,
+				AA000100000000000000404A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB000100000000000000502A /* Build configuration list for PBXNativeTarget "PipelineTrackerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB000100000000000000403A /* Debug */,
+				BB000100000000000000404A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = AA000100000000000000001A /* Project object */;
+}
