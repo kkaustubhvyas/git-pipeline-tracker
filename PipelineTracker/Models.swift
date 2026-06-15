@@ -235,6 +235,8 @@ struct Pipeline: Identifiable, Codable, Equatable {
     var projectId: Int = 0
     var projectName: String = ""
     var accountId: UUID = UUID()
+    /// GitHub only: workflow name (e.g. "CI", "Deploy"). Empty for GitLab.
+    var workflowName: String = ""
 
     enum CodingKeys: String, CodingKey {
         case id, status, ref, sha

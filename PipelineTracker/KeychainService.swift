@@ -22,28 +22,30 @@ final class KeychainService {
         let data = Data(token.utf8)
         let account = accountId.uuidString
 
-        // Attempt update first; if not found, insert.
-        let updateQuery: [CFString: Any] = [
+        // Delete any existing item first so we always re-insert with correct ACL.
+        let deleteQuery: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account
         ]
-        let updateAttrs: [CFString: Any] = [kSecValueData: data]
-        let updateStatus = SecItemUpdate(updateQuery as CFDictionary, updateAttrs as CFDictionary)
+        SecItemDelete(deleteQuery as CFDictionary)
 
-        if updateStatus == errSecItemNotFound {
-            let addQuery: [CFString: Any] = [
-                kSecClass: kSecClassGenericPassword,
-                kSecAttrService: service,
-                kSecAttrAccount: account,
-                kSecValueData: data,
-                kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-            ]
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
-            guard addStatus == errSecSuccess else { throw KeychainError.saveFailed(addStatus) }
-        } else if updateStatus != errSecSuccess {
-            throw KeychainError.saveFailed(updateStatus)
-        }
+        // Empty trustedApplications array = any app can access without password prompt.
+        // Necessary for ad-hoc signed apps whose identity changes across builds.
+        var access: SecAccess?
+        SecAccessCreate("\(service).\(account)" as CFString, [] as CFArray, &access)
+
+        var addQuery: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecValueData: data,
+            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        ]
+        if let access { addQuery[kSecAttrAccess] = access }
+
+        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        guard addStatus == errSecSuccess else { throw KeychainError.saveFailed(addStatus) }
     }
 
     func loadToken(for accountId: UUID) -> String? {

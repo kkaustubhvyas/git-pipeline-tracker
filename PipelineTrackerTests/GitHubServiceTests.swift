@@ -78,7 +78,8 @@ final class GitHubServiceTests: XCTestCase {
         XCTAssertEqual(pipelines[0].id, 999)
         XCTAssertEqual(pipelines[0].status, .running)
         XCTAssertEqual(pipelines[0].ref, "main")
-        XCTAssertEqual(pipelines[0].projectName, "CI")
+        XCTAssertEqual(pipelines[0].workflowName, "CI")
+        XCTAssertEqual(pipelines[0].projectName, "my-repo")
     }
 
     // MARK: - Status mapping

@@ -173,7 +173,6 @@ private struct GitHubWorkflowRun: Decodable {
     }
 
     func asPipeline(projectId: Int, projectName: String) -> Pipeline {
-        // Use workflow name as projectName so the pill badge shows "Deploy" / "CI" etc.
         var p = Pipeline(
             id: id, status: pipelineStatus,
             ref: headBranch.isEmpty ? "(default)" : headBranch,
@@ -181,7 +180,8 @@ private struct GitHubWorkflowRun: Decodable {
             createdAt: createdAt, updatedAt: updatedAt
         )
         p.projectId = projectId
-        p.projectName = name ?? projectName
+        p.projectName = projectName
+        p.workflowName = name ?? ""
         return p
     }
 }

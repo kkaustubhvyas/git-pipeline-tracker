@@ -4,6 +4,12 @@ struct MenuContentView: View {
     @EnvironmentObject var monitor: PipelineMonitor
     @Environment(\.openSettings) private var openSettings
 
+    private var maxScrollHeight: CGFloat {
+        (NSScreen.main?.frame.height ?? 800) * 0.7 - 88
+    }
+
+    @State private var contentHeight: CGFloat = 0
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headerBar
@@ -12,7 +18,7 @@ struct MenuContentView: View {
             Divider()
             footerBar
         }
-        .frame(width: 400, height: 540)
+        .frame(width: 400)
     }
 
     // MARK: - Header
@@ -80,7 +86,7 @@ struct MenuContentView: View {
 
     private var accountList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(monitor.accounts) { account in
                     AccountSection(account: account)
                         .environmentObject(monitor)
@@ -89,8 +95,16 @@ struct MenuContentView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity)
+            // Measure the VStack's own natural height (unaffected by ScrollView clipping).
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.height
+            } action: { newHeight in
+                if newHeight > 0 { contentHeight = newHeight }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Before first measurement, use max so content has room to lay out & be measured.
+        .frame(height: contentHeight == 0 ? maxScrollHeight : min(contentHeight, maxScrollHeight))
     }
 
     // MARK: - Footer
@@ -314,7 +328,7 @@ struct PipelineRowView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(pipeline.ref)
+                        Text(pipeline.workflowName.isEmpty ? pipeline.ref : pipeline.workflowName)
                             .font(.callout).fontWeight(.medium).lineLimit(1)
                         Text("#\(pipeline.id)")
                             .font(.caption).foregroundStyle(.tertiary).monospacedDigit()
@@ -327,6 +341,12 @@ struct PipelineRowView: View {
                                 .background(Color.primary.opacity(0.07))
                                 .clipShape(RoundedRectangle(cornerRadius: 3))
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        if !pipeline.workflowName.isEmpty {
+                            Text(pipeline.ref)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
                                 .lineLimit(1)
                         }
                         Text(pipeline.status.displayName)
@@ -365,8 +385,6 @@ struct PipelineRowView: View {
     }
 
     private func timeLabel(for pipeline: Pipeline) -> String {
-        // Active pipelines: live relative timer is useful (shows elapsed)
-        // Finished pipelines: freeze the label so it doesn't keep ticking
         if pipeline.status.isActive {
             let elapsed = Int(-pipeline.updatedAt.timeIntervalSinceNow)
             if elapsed < 60 { return "\(elapsed)s" }
