@@ -12,6 +12,21 @@ final class PipelineMonitor: ObservableObject {
     @Published var isRefreshing = false
     @Published var lastRefresh: Date?
     @Published var jobSummaries: [Int: PipelineJobSummary] = [:]
+
+    // Expandable steps
+    @Published var expandedPipelines: Set<Int> = []
+    @Published var steps: [Int: [PipelineStep]] = [:]
+    @Published var loadingSteps: Set<Int> = []
+
+    // Retry / re-run
+    @Published var retrying: Set<Int> = []        // pipeline ids being re-run
+    @Published var rerunningSteps: Set<Int> = []  // step (job) ids being re-run
+
+    // Server-side pagination — pages currently loaded per account, and whether more exist.
+    @Published var pageCounts: [UUID: Int] = [:]
+    @Published var hasMore: [UUID: Bool] = [:]
+    @Published var loadingMore: Set<UUID> = []
+
     @Published var sortOrder: PipelineSortOrder = .timeStarted {
         didSet { UserDefaults.standard.set(sortOrder.rawValue, forKey: "sort_order") }
     }
@@ -185,12 +200,24 @@ final class PipelineMonitor: ObservableObject {
     private func refreshAccount(_ account: Account) async {
         guard let service = services[account.id] else { return }
 
+        // Pages currently loaded for this account (grows via "Show more"). Default 1.
+        let pages = max(1, pageCounts[account.id] ?? 1)
         var collected: [Pipeline] = []
+        var anyProjectHasMore = false
 
         for projectId in account.watchedProjectIds {
             guard let project = projects[account.id]?.first(where: { $0.id == projectId }) else { continue }
             do {
-                var batch = try await service.fetchPipelines(for: project)
+                var projectPipelines: [Pipeline] = []
+                for page in 1...pages {
+                    let pageBatch = try await service.fetchPipelines(for: project, page: page, perPage: pageSize)
+                    projectPipelines.append(contentsOf: pageBatch)
+                    // A full page implies there may be more beyond what's loaded.
+                    if page == pages && pageBatch.count == pageSize { anyProjectHasMore = true }
+                    if pageBatch.count < pageSize { break }
+                }
+
+                var batch = projectPipelines
                 for i in batch.indices {
                     batch[i].projectId = projectId
                     batch[i].projectName = batch[i].projectName.isEmpty ? project.name : batch[i].projectName
@@ -224,6 +251,8 @@ final class PipelineMonitor: ObservableObject {
                 }
             }
         }
+
+        hasMore[account.id] = anyProjectHasMore
 
         if isFirstLoad {
             for p in collected { knownPipelineIds.insert(p.id) }
@@ -273,6 +302,99 @@ final class PipelineMonitor: ObservableObject {
             NotificationManager.shared.notifyTokenExpired(accountName: account.name)
         } catch {
             accountErrors[account.id] = error.localizedDescription
+        }
+    }
+
+    // MARK: - Pagination
+
+    func loadMore(for account: Account) {
+        guard !loadingMore.contains(account.id) else { return }
+        loadingMore.insert(account.id)
+        pageCounts[account.id] = max(1, pageCounts[account.id] ?? 1) + 1
+        Task {
+            await refreshAccount(account)
+            loadingMore.remove(account.id)
+        }
+    }
+
+    func canLoadMore(_ account: Account) -> Bool { hasMore[account.id] ?? false }
+
+    // MARK: - Steps (expandable)
+
+    func toggleExpanded(_ pipeline: Pipeline) {
+        if expandedPipelines.contains(pipeline.id) {
+            expandedPipelines.remove(pipeline.id)
+        } else {
+            expandedPipelines.insert(pipeline.id)
+            // Always refetch on expand so steps are current; keep any cached copy visible meanwhile.
+            loadSteps(for: pipeline)
+        }
+    }
+
+    func loadSteps(for pipeline: Pipeline) {
+        guard let account = accounts.first(where: { $0.id == pipeline.accountId }),
+              let service = services[account.id],
+              let project = projects[account.id]?.first(where: { $0.id == pipeline.projectId })
+        else { return }
+        guard !loadingSteps.contains(pipeline.id) else { return }
+        loadingSteps.insert(pipeline.id)
+        Task {
+            defer { loadingSteps.remove(pipeline.id) }
+            if let result = try? await service.fetchSteps(for: pipeline, project: project) {
+                steps[pipeline.id] = result
+            }
+        }
+    }
+
+    // MARK: - Retry / re-run
+
+    enum RerunMode { case failed, all }
+
+    func rerun(_ pipeline: Pipeline, mode: RerunMode) {
+        guard let account = accounts.first(where: { $0.id == pipeline.accountId }),
+              let service = services[account.id],
+              let project = projects[account.id]?.first(where: { $0.id == pipeline.projectId })
+        else { return }
+        guard !retrying.contains(pipeline.id) else { return }
+        retrying.insert(pipeline.id)
+        Task {
+            defer { retrying.remove(pipeline.id) }
+            do {
+                switch mode {
+                case .failed: try await service.rerunFailed(pipeline: pipeline, project: project)
+                case .all:    try await service.rerunAll(pipeline: pipeline, project: project)
+                }
+                // Give the provider a moment to register, then refresh.
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                await refreshAccount(account)
+                if expandedPipelines.contains(pipeline.id) { loadSteps(for: pipeline) }
+            } catch GitLabError.unauthorized {
+                accountErrors[account.id] = "Re-run needs write scope (GitLab: api, GitHub: repo)"
+            } catch {
+                accountErrors[account.id] = "Re-run failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func rerunStep(_ step: PipelineStep, in pipeline: Pipeline) {
+        guard let account = accounts.first(where: { $0.id == pipeline.accountId }),
+              let service = services[account.id],
+              let project = projects[account.id]?.first(where: { $0.id == pipeline.projectId })
+        else { return }
+        guard !rerunningSteps.contains(step.id) else { return }
+        rerunningSteps.insert(step.id)
+        Task {
+            defer { rerunningSteps.remove(step.id) }
+            do {
+                try await service.rerunStep(stepId: step.id, pipeline: pipeline, project: project)
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                loadSteps(for: pipeline)
+                await refreshAccount(account)
+            } catch GitLabError.unauthorized {
+                accountErrors[account.id] = "Re-run needs write scope (GitLab: api, GitHub: repo)"
+            } catch {
+                accountErrors[account.id] = "Step re-run failed: \(error.localizedDescription)"
+            }
         }
     }
 

@@ -175,8 +175,8 @@ struct AccountDetailView: View {
                 }
             }
 
-            Section("GitLab Token") {
-                SecureField("glpat-xxxxxxxxxxxxxxxxxxxx", text: $tokenDraft)
+            Section("\(account.provider.displayName) Token") {
+                SecureField(account.provider.tokenPlaceholder, text: $tokenDraft)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(.body, design: .monospaced))
 
@@ -217,7 +217,7 @@ struct AccountDetailView: View {
                     .disabled(tokenDraft.isEmpty || monitor.loadingProjectsFor.contains(account.id))
                 }
 
-                Text("\(account.provider.tokenScopeHint)")
+                Text(.init(account.provider.tokenScopeHint))
                     .font(.caption).foregroundStyle(.secondary)
             }
 
@@ -482,128 +482,198 @@ struct FlowLayout: Layout {
     }
 }
 
+// MARK: - Number stepper field (manual entry + stepper)
+
+struct NumberStepperField: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    var step: Int = 1
+    var suffix: String = ""
+
+    private var clamped: Binding<Int> {
+        Binding(
+            get: { value },
+            set: { value = min(range.upperBound, max(range.lowerBound, $0)) }
+        )
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            TextField("", value: clamped, format: .number)
+                .textFieldStyle(.roundedBorder)
+                .font(Theme.mono(12))
+                .multilineTextAlignment(.trailing)
+                .frame(width: 58)
+            if !suffix.isEmpty {
+                Text(suffix).font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            Stepper("", value: clamped, in: range, step: step)
+                .labelsHidden()
+        }
+        .fixedSize()
+    }
+}
+
 // MARK: - General settings
 
 struct GeneralSettingsView: View {
     @EnvironmentObject var monitor: PipelineMonitor
     @State private var intervalDraft: Double = 10
     @State private var pageSizeDraft: Double = 20
+    @State private var intervalSeconds: Int = 10
+    @State private var pageSizeInt: Int = 20
     @State private var notifStatus: UNAuthorizationStatus = .notDetermined
     @State private var testSent = false
+    @State private var launchAtLogin = LaunchAtLogin.isEnabled
+
+    private let intervalPresets: [Int] = [5, 10, 30, 60, 300]
 
     var body: some View {
-        Form {
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Slider(value: $intervalDraft, in: 1...3600) {
-                            EmptyView()
-                        } minimumValueLabel: {
-                            Text("1s").font(.caption2).foregroundStyle(.secondary)
-                        } maximumValueLabel: {
-                            Text("1h").font(.caption2).foregroundStyle(.secondary)
-                        }
-                        .onChange(of: intervalDraft) { _, v in monitor.pollingInterval = v }
-
-                        Text(formatInterval(intervalDraft))
-                            .font(.system(.callout, design: .monospaced))
-                            .frame(width: 56, alignment: .trailing)
-                    }
-
-                    Text("How often to check for pipeline updates. Lower = more API calls.")
-                        .font(.caption).foregroundStyle(.secondary)
-
-                    HStack(spacing: 6) {
-                        ForEach([5.0, 10.0, 30.0, 60.0, 300.0], id: \.self) { preset in
-                            Button(formatInterval(preset)) {
-                                intervalDraft = preset
-                                monitor.pollingInterval = preset
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.mini)
-                            .tint(intervalDraft == preset ? .blue : nil)
-                        }
-                    }
-                }
-            } header: {
-                Text("Polling Interval")
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.lg) {
+                startupCard
+                pollingCard
+                pageSizeCard
+                notificationsCard
             }
-
-            Section {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Slider(value: $pageSizeDraft, in: 5...100, step: 5) {
-                            EmptyView()
-                        } minimumValueLabel: {
-                            Text("5").font(.caption2).foregroundStyle(.secondary)
-                        } maximumValueLabel: {
-                            Text("100").font(.caption2).foregroundStyle(.secondary)
-                        }
-                        .onChange(of: pageSizeDraft) { _, v in monitor.pageSize = Int(v) }
-
-                        Text("\(Int(pageSizeDraft))")
-                            .font(.system(.callout, design: .monospaced))
-                            .frame(width: 36, alignment: .trailing)
-                    }
-                    Text("Max pipelines shown per account before \"Show more\" appears.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            } header: {
-                Text("Pipelines Per Account")
-            }
-
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Image(systemName: notifStatusIcon)
-                            .foregroundStyle(notifStatusColor)
-                        Text(notifStatusLabel)
-                            .font(.callout)
-                        Spacer()
-                        if notifStatus == .denied {
-                            Button("Open System Settings") {
-                                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
-                            }
-                            .controlSize(.small)
-                        } else if notifStatus == .notDetermined {
-                            Button("Request Permission") {
-                                NotificationManager.shared.requestPermission { _ in
-                                    NotificationManager.shared.checkAuthStatus { notifStatus = $0 }
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-                    }
-
-                    if notifStatus == .authorized || notifStatus == .provisional {
-                        HStack(spacing: 8) {
-                            Button("Send Test Notification") {
-                                NotificationManager.shared.sendTest()
-                                testSent = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { testSent = false }
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
-
-                            if testSent {
-                                Label("Sent — check Notification Center", systemImage: "checkmark.circle.fill")
-                                    .font(.caption).foregroundStyle(.green)
-                            }
-                        }
-                        Text("If the test doesn't appear, check System Settings › Notifications › Pipeline Tracker and ensure \"Allow Notifications\" is on.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            } header: {
-                Text("Notifications")
-            }
+            .padding(Theme.xl)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
         }
-        .padding()
         .onAppear {
             intervalDraft = monitor.pollingInterval
+            intervalSeconds = Int(monitor.pollingInterval)
             pageSizeDraft = Double(monitor.pageSize)
+            pageSizeInt = monitor.pageSize
+            launchAtLogin = LaunchAtLogin.isEnabled
             NotificationManager.shared.checkAuthStatus { notifStatus = $0 }
+        }
+    }
+
+    // MARK: Cards
+
+    private func card<Content: View>(_ icon: String, _ title: String, _ subtitle: String,
+                                     @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Theme.md) {
+            HStack(spacing: Theme.sm) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Theme.accent.opacity(0.14)).frame(width: 28, height: 28)
+                    Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.accent)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(Theme.display(13, .semibold))
+                    Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+            content()
+        }
+        .padding(Theme.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surfaceRaised)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLg, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusLg, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
+    }
+
+    private var startupCard: some View {
+        card("power", "Startup", "Launch automatically when you log in") {
+            Toggle(isOn: $launchAtLogin) {
+                Text("Launch at login").font(.system(size: 12))
+            }
+            .toggleStyle(.switch)
+            .tint(Theme.accent)
+            .onChange(of: launchAtLogin) { _, enabled in
+                let ok = LaunchAtLogin.setEnabled(enabled)
+                if !ok || launchAtLogin != LaunchAtLogin.isEnabled {
+                    launchAtLogin = LaunchAtLogin.isEnabled
+                }
+            }
+        }
+    }
+
+    private var pollingCard: some View {
+        card("timer", "Polling interval", "How often pipelines are checked. Lower = more API calls.") {
+            VStack(alignment: .leading, spacing: Theme.md) {
+                HStack(spacing: Theme.md) {
+                    Slider(value: $intervalDraft, in: 1...3600)
+                        .onChange(of: intervalDraft) { _, v in
+                            let s = Int(v); intervalSeconds = s; monitor.pollingInterval = Double(s)
+                        }
+                    NumberStepperField(value: $intervalSeconds, range: 1...3600, step: 5, suffix: "sec")
+                        .onChange(of: intervalSeconds) { _, v in
+                            intervalDraft = Double(v); monitor.pollingInterval = Double(v)
+                        }
+                }
+                HStack(spacing: 6) {
+                    ForEach(intervalPresets, id: \.self) { preset in
+                        Button(formatInterval(Double(preset))) {
+                            intervalSeconds = preset; intervalDraft = Double(preset); monitor.pollingInterval = Double(preset)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .tint(intervalSeconds == preset ? Theme.accent : nil)
+                    }
+                    Spacer()
+                    Text("currently \(formatInterval(Double(intervalSeconds)))")
+                        .font(Theme.mono(10)).foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    private var pageSizeCard: some View {
+        card("list.number", "Pipelines per fetch", "Records pulled per page. \"Load more\" fetches the next page.") {
+            HStack(spacing: Theme.md) {
+                Slider(value: $pageSizeDraft, in: 5...100, step: 1)
+                    .onChange(of: pageSizeDraft) { _, v in
+                        let n = Int(v); pageSizeInt = n; monitor.pageSize = n
+                    }
+                NumberStepperField(value: $pageSizeInt, range: 5...100, step: 5, suffix: "rows")
+                    .onChange(of: pageSizeInt) { _, v in
+                        pageSizeDraft = Double(v); monitor.pageSize = v
+                    }
+            }
+        }
+    }
+
+    private var notificationsCard: some View {
+        card("bell.badge", "Notifications", "Get notified when a pipeline changes state") {
+            VStack(alignment: .leading, spacing: Theme.md) {
+                HStack(spacing: Theme.sm) {
+                    Image(systemName: notifStatusIcon).foregroundStyle(notifStatusColor)
+                    Text(notifStatusLabel).font(.system(size: 12))
+                    Spacer()
+                    if notifStatus == .denied {
+                        Button("Open System Settings") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.notifications")!)
+                        }
+                        .controlSize(.small)
+                    } else if notifStatus == .notDetermined {
+                        Button("Request Permission") {
+                            NotificationManager.shared.requestPermission { _ in
+                                NotificationManager.shared.checkAuthStatus { notifStatus = $0 }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent).tint(Theme.accent).controlSize(.small)
+                    }
+                }
+                if notifStatus == .authorized || notifStatus == .provisional {
+                    HStack(spacing: Theme.sm) {
+                        Button("Send Test Notification") {
+                            NotificationManager.shared.sendTest()
+                            testSent = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { testSent = false }
+                        }
+                        .buttonStyle(.bordered).controlSize(.small)
+                        if testSent {
+                            Label("Sent", systemImage: "checkmark.circle.fill")
+                                .font(.caption).foregroundStyle(.green)
+                        }
+                    }
+                    Text("If it doesn't appear, check System Settings › Notifications › Pipeline Tracker.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
         }
     }
 

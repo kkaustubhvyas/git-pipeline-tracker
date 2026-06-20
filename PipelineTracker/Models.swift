@@ -44,8 +44,8 @@ enum Provider: String, Codable, CaseIterable {
 
     var tokenScopeHint: String {
         switch self {
-        case .gitlab: return "Required scope: **read_api**"
-        case .github: return "Required scope: **repo** (or **public_repo** for public only)"
+        case .gitlab: return "Scope: **read_api** to monitor · **api** to enable Retry"
+        case .github: return "Scope: **repo** (read + Retry) · **public_repo** for public only"
         }
     }
 }
@@ -203,6 +203,23 @@ enum PipelineStatus: String, Codable, Equatable {
         default: return false
         }
     }
+
+    /// True once execution has actually begun (running, or any terminal state).
+    /// Pre-run / awaiting-action states are not "started".
+    var hasStarted: Bool {
+        switch self {
+        case .created, .waitingForResource, .preparing, .pending, .scheduled, .manual: return false
+        default: return true
+        }
+    }
+
+    /// Whether this pipeline can be retried.
+    var isRetryable: Bool {
+        switch self {
+        case .failed, .canceled: return true
+        default: return false
+        }
+    }
 }
 
 // MARK: - GitLabProject
@@ -296,4 +313,17 @@ struct PipelineJob: Identifiable, Codable {
         case webUrl = "web_url"
         case allowFailure = "allow_failure"
     }
+}
+
+// MARK: - PipelineStep (unified, for display)
+
+/// Provider-agnostic representation of a single job/step within a pipeline.
+struct PipelineStep: Identifiable, Equatable {
+    let id: Int
+    let name: String
+    let status: PipelineStatus
+    let stage: String?
+    let webURL: String?
+    /// Allowed to fail (GitLab `allow_failure`) or skipped (GitHub) — excluded from progress counts.
+    let isOptional: Bool
 }

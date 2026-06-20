@@ -198,6 +198,98 @@ final class GitLabServiceTests: XCTestCase {
         XCTAssertEqual(summary.label, "1/2")
     }
 
+    // MARK: - fetchSteps
+
+    func test_fetchSteps_mapsJobsToSteps() async throws {
+        MockURLProtocol.stub(json: """
+        [{"id":11,"name":"build","status":"success","stage":"build","web_url":"https://x.com/11","allow_failure":false},
+         {"id":12,"name":"lint","status":"failed","stage":"test","web_url":"https://x.com/12","allow_failure":true}]
+        """)
+        let pipeline = Pipeline(id: 5, status: .running, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "P", nameWithNamespace: "G/P", pathWithNamespace: "g/p")
+        let steps = try await service.fetchSteps(for: pipeline, project: project)
+        XCTAssertEqual(steps.count, 2)
+        XCTAssertEqual(steps[0].name, "build")
+        XCTAssertEqual(steps[0].stage, "build")
+        XCTAssertEqual(steps[0].status, .success)
+        XCTAssertFalse(steps[0].isOptional)
+        XCTAssertTrue(steps[1].isOptional)
+        XCTAssertEqual(steps[1].webURL, "https://x.com/12")
+    }
+
+    // MARK: - re-run
+
+    func test_rerunFailed_postsToRetryEndpoint() async throws {
+        var capturedURL: URL?
+        var capturedMethod: String?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            capturedMethod = req.httpMethod
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!
+            return (resp, Data("{}".utf8))
+        }
+        let pipeline = Pipeline(id: 77, status: .failed, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 9, name: "P", nameWithNamespace: "G/P", pathWithNamespace: "g/p")
+        try await service.rerunFailed(pipeline: pipeline, project: project)
+        XCTAssertEqual(capturedMethod, "POST")
+        XCTAssertTrue(capturedURL?.absoluteString.hasSuffix("/projects/9/pipelines/77/retry") ?? false)
+    }
+
+    func test_rerunAll_triggersNewPipelineOnRef() async throws {
+        var capturedURL: URL?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!
+            return (resp, Data("{}".utf8))
+        }
+        let pipeline = Pipeline(id: 1, status: .success, ref: "feature/x", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 9, name: "P", nameWithNamespace: "G/P", pathWithNamespace: "g/p")
+        try await service.rerunAll(pipeline: pipeline, project: project)
+        let s = capturedURL?.absoluteString ?? ""
+        XCTAssertTrue(s.contains("/projects/9/pipeline?ref="))
+        XCTAssertTrue(s.contains("feature/x") || s.contains("feature%2Fx"))
+    }
+
+    func test_rerunStep_postsToJobRetry() async throws {
+        var capturedURL: URL?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!
+            return (resp, Data("{}".utf8))
+        }
+        let pipeline = Pipeline(id: 1, status: .success, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 9, name: "P", nameWithNamespace: "G/P", pathWithNamespace: "g/p")
+        try await service.rerunStep(stepId: 42, pipeline: pipeline, project: project)
+        XCTAssertTrue(capturedURL?.absoluteString.hasSuffix("/projects/9/jobs/42/retry") ?? false)
+    }
+
+    func test_rerun_unauthorized_throws() async {
+        MockURLProtocol.stub(statusCode: 403, json: "{}")
+        let pipeline = Pipeline(id: 1, status: .failed, ref: "m", sha: "s",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "P", nameWithNamespace: "G/P", pathWithNamespace: "g/p")
+        do { try await service.rerunFailed(pipeline: pipeline, project: project); XCTFail("Expected error") }
+        catch GitLabError.unauthorized { } catch { XCTFail("Unexpected: \(error)") }
+    }
+
+    func test_paginatedFetch_includesPageParam() async throws {
+        var capturedURL: URL?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (resp, Data("[]".utf8))
+        }
+        let project = GitLabProject(id: 3, name: "P", nameWithNamespace: "G/P", pathWithNamespace: "g/p")
+        _ = try await service.fetchPipelines(for: project, page: 4, perPage: 15)
+        let s = capturedURL?.absoluteString ?? ""
+        XCTAssertTrue(s.contains("page=4"))
+        XCTAssertTrue(s.contains("per_page=15"))
+    }
+
     // MARK: - GitLabError descriptions
 
     func test_errorDescriptions_nonNil() {

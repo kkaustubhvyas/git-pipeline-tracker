@@ -4,8 +4,29 @@ import Foundation
 
 protocol PipelineProvider {
     func fetchAllProjects() async throws -> [GitLabProject]
-    func fetchPipelines(for project: GitLabProject) async throws -> [Pipeline]
-    func fetchJobSummary(for pipeline: Pipeline, project: GitLabProject) async throws -> PipelineJobSummary
+    func fetchPipelines(for project: GitLabProject, page: Int, perPage: Int) async throws -> [Pipeline]
+    func fetchSteps(for pipeline: Pipeline, project: GitLabProject) async throws -> [PipelineStep]
+    /// Re-run only the failed/canceled jobs in the existing pipeline.
+    func rerunFailed(pipeline: Pipeline, project: GitLabProject) async throws
+    /// Re-run the whole pipeline including passed jobs. GitLab triggers a *new* pipeline on the ref.
+    func rerunAll(pipeline: Pipeline, project: GitLabProject) async throws
+    /// Re-run a single job/step.
+    func rerunStep(stepId: Int, pipeline: Pipeline, project: GitLabProject) async throws
+}
+
+extension PipelineProvider {
+    /// Default progress summary derived from the step list, so providers only implement `fetchSteps`.
+    func fetchJobSummary(for pipeline: Pipeline, project: GitLabProject) async throws -> PipelineJobSummary {
+        let steps = try await fetchSteps(for: pipeline, project: project)
+        let required = steps.filter { !$0.isOptional }
+        let started = required.filter { $0.status.hasStarted }.count
+        return PipelineJobSummary(started: started, total: required.count)
+    }
+
+    /// Convenience for callers that don't need explicit paging.
+    func fetchPipelines(for project: GitLabProject) async throws -> [Pipeline] {
+        try await fetchPipelines(for: project, page: 1, perPage: 20)
+    }
 }
 
 // MARK: -
@@ -74,26 +95,38 @@ final class GitLabService: PipelineProvider {
         return all
     }
 
-    func fetchPipelines(for projectId: Int, perPage: Int = 20) async throws -> [Pipeline] {
+    func fetchPipelines(for project: GitLabProject, page: Int = 1, perPage: Int = 20) async throws -> [Pipeline] {
         return try await fetch(
-            from: "\(baseURL)/projects/\(projectId)/pipelines?per_page=\(perPage)&order_by=updated_at&sort=desc"
+            from: "\(baseURL)/projects/\(project.id)/pipelines?per_page=\(perPage)&page=\(page)&order_by=updated_at&sort=desc"
         )
-    }
-
-    func fetchPipelines(for project: GitLabProject) async throws -> [Pipeline] {
-        try await fetchPipelines(for: project.id)
     }
 
     func fetchJobs(pipelineId: Int, projectId: Int) async throws -> [PipelineJob] {
         return try await fetch(from: "\(baseURL)/projects/\(projectId)/pipelines/\(pipelineId)/jobs?per_page=100")
     }
 
-    func fetchJobSummary(for pipeline: Pipeline, project: GitLabProject) async throws -> PipelineJobSummary {
+    func fetchSteps(for pipeline: Pipeline, project: GitLabProject) async throws -> [PipelineStep] {
         let jobs = try await fetchJobs(pipelineId: pipeline.id, projectId: project.id)
-        let required = jobs.filter { !$0.allowFailure }
-        let notStarted: Set<PipelineStatus> = [.created, .waitingForResource, .preparing, .pending]
-        let started = required.filter { !notStarted.contains($0.status) }.count
-        return PipelineJobSummary(started: started, total: required.count)
+        return jobs.map {
+            PipelineStep(id: $0.id, name: $0.name, status: $0.status,
+                         stage: $0.stage, webURL: $0.webUrl, isOptional: $0.allowFailure)
+        }
+    }
+
+    func rerunFailed(pipeline: Pipeline, project: GitLabProject) async throws {
+        // Retries failed/canceled jobs in the pipeline. Requires `api` (write) scope.
+        try await post(to: "\(baseURL)/projects/\(project.id)/pipelines/\(pipeline.id)/retry")
+    }
+
+    func rerunAll(pipeline: Pipeline, project: GitLabProject) async throws {
+        // GitLab can't re-run passed jobs in place — create a fresh pipeline on the same ref.
+        let ref = pipeline.ref.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? pipeline.ref
+        try await post(to: "\(baseURL)/projects/\(project.id)/pipeline?ref=\(ref)")
+    }
+
+    func rerunStep(stepId: Int, pipeline: Pipeline, project: GitLabProject) async throws {
+        // Retries a single job — works for any completed job, including successful ones.
+        try await post(to: "\(baseURL)/projects/\(project.id)/jobs/\(stepId)/retry")
     }
 
     // MARK: - Private
@@ -126,6 +159,29 @@ final class GitLabService: PipelineProvider {
             throw GitLabError.rateLimited
         default:
             throw GitLabError.networkError(URLError(.badServerResponse))
+        }
+    }
+
+    private func post(to urlString: String) async throws {
+        guard !token.isEmpty else { throw GitLabError.invalidToken }
+        guard let url = URL(string: urlString) else { throw GitLabError.invalidToken }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(token, forHTTPHeaderField: "PRIVATE-TOKEN")
+
+        let (_, response): (Data, URLResponse)
+        do { (_, response) = try await session.data(for: req) }
+        catch { throw GitLabError.networkError(error) }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw GitLabError.networkError(URLError(.badServerResponse))
+        }
+        switch http.statusCode {
+        case 200...299: return
+        case 401, 403:  throw GitLabError.unauthorized
+        case 429:       throw GitLabError.rateLimited
+        default:        throw GitLabError.networkError(URLError(.badServerResponse))
         }
     }
 }

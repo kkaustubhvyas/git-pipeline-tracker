@@ -16,6 +16,8 @@
 		AA000100000000000000207A /* NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000107A /* NotificationManager.swift */; };
 		AA000100000000000000208A /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000108B /* KeychainService.swift */; };
 		AA000100000000000000209A /* GitHubService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000100000000000000109B /* GitHubService.swift */; };
+		AA00010000000000000020BA /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00010000000000000010BA /* LaunchAtLogin.swift */; };
+		AA00010000000000000020CA /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00010000000000000010CA /* Theme.swift */; };
 		AA00010000000000000020AA /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA00010000000000000010AA /* Assets.xcassets */; };
 		BB000100000000000000201A /* MockURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000101A /* MockURLProtocol.swift */; };
 		BB000100000000000000202A /* ModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB000100000000000000102A /* ModelsTests.swift */; };
@@ -38,6 +40,8 @@
 		AA000100000000000000109A /* PipelineTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PipelineTracker.entitlements; sourceTree = "<group>"; };
 		AA000100000000000000108B /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		AA000100000000000000109B /* GitHubService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubService.swift; sourceTree = "<group>"; };
+		AA00010000000000000010BA /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
+		AA00010000000000000010CA /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		AA00010000000000000010AA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BB000100000000000000006A /* PipelineTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PipelineTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB000100000000000000101A /* MockURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockURLProtocol.swift; sourceTree = "<group>"; };
@@ -89,6 +93,8 @@
 				AA000100000000000000109A /* PipelineTracker.entitlements */,
 				AA000100000000000000108B /* KeychainService.swift */,
 				AA000100000000000000109B /* GitHubService.swift */,
+				AA00010000000000000010BA /* LaunchAtLogin.swift */,
+				AA00010000000000000010CA /* Theme.swift */,
 				AA00010000000000000010AA /* Assets.xcassets */,
 			);
 			path = PipelineTracker;
@@ -215,6 +221,8 @@
 				AA000100000000000000207A /* NotificationManager.swift in Sources */,
 				AA000100000000000000208A /* KeychainService.swift in Sources */,
 				AA000100000000000000209A /* GitHubService.swift in Sources */,
+				AA00010000000000000020BA /* LaunchAtLogin.swift in Sources */,
+				AA00010000000000000020CA /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -347,6 +355,7 @@
 		AA000100000000000000403A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PipelineTracker/PipelineTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -366,6 +375,7 @@
 		AA000100000000000000404A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = PipelineTracker/PipelineTracker.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;

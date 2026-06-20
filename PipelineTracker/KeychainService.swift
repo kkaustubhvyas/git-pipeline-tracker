@@ -18,7 +18,19 @@ final class KeychainService {
     private let service = "com.kaustubh.pipeline-tracker"
     private init() {}
 
+    /// Under XCTest, the real Keychain triggers a password prompt on every access.
+    /// Route to an in-memory store instead so tests run unattended and deterministically.
+    private static let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    private let memoryLock = NSLock()
+    private var memoryStore: [String: String] = [:]
+
     func saveToken(_ token: String, for accountId: UUID) throws {
+        if Self.isTesting {
+            memoryLock.lock(); defer { memoryLock.unlock() }
+            memoryStore[accountId.uuidString] = token
+            return
+        }
+
         let data = Data(token.utf8)
         let account = accountId.uuidString
 
@@ -49,6 +61,11 @@ final class KeychainService {
     }
 
     func loadToken(for accountId: UUID) -> String? {
+        if Self.isTesting {
+            memoryLock.lock(); defer { memoryLock.unlock() }
+            return memoryStore[accountId.uuidString]
+        }
+
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
@@ -64,6 +81,12 @@ final class KeychainService {
     }
 
     func deleteToken(for accountId: UUID) {
+        if Self.isTesting {
+            memoryLock.lock(); defer { memoryLock.unlock() }
+            memoryStore.removeValue(forKey: accountId.uuidString)
+            return
+        }
+
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,

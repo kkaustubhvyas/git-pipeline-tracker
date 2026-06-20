@@ -168,9 +168,9 @@ final class GitHubServiceTests: XCTestCase {
         // 2 completed + 1 in_progress = all 3 started → shows 3/3
         MockURLProtocol.stub(json: """
         {"jobs":[
-          {"status":"completed","conclusion":"success"},
-          {"status":"completed","conclusion":"success"},
-          {"status":"in_progress","conclusion":null}
+          {"id":1,"name":"a","status":"completed","conclusion":"success"},
+          {"id":2,"name":"b","status":"completed","conclusion":"success"},
+          {"id":3,"name":"c","status":"in_progress","conclusion":null}
         ]}
         """)
         let pipeline = Pipeline(id: 42, status: .running, ref: "main", sha: "abc",
@@ -187,9 +187,9 @@ final class GitHubServiceTests: XCTestCase {
         // 1 completed + 1 in_progress + 1 queued = 2 started out of 3
         MockURLProtocol.stub(json: """
         {"jobs":[
-          {"status":"completed","conclusion":"success"},
-          {"status":"in_progress","conclusion":null},
-          {"status":"queued","conclusion":null}
+          {"id":1,"name":"a","status":"completed","conclusion":"success"},
+          {"id":2,"name":"b","status":"in_progress","conclusion":null},
+          {"id":3,"name":"c","status":"queued","conclusion":null}
         ]}
         """)
         let pipeline = Pipeline(id: 42, status: .running, ref: "main", sha: "abc",
@@ -205,9 +205,9 @@ final class GitHubServiceTests: XCTestCase {
     func test_fetchJobSummary_excludesSkippedJobs() async throws {
         MockURLProtocol.stub(json: """
         {"jobs":[
-          {"status":"completed","conclusion":"success"},
-          {"status":"completed","conclusion":"success"},
-          {"status":"completed","conclusion":"skipped"}
+          {"id":1,"name":"a","status":"completed","conclusion":"success"},
+          {"id":2,"name":"b","status":"completed","conclusion":"success"},
+          {"id":3,"name":"c","status":"completed","conclusion":"skipped"}
         ]}
         """)
         let pipeline = Pipeline(id: 1, status: .running, ref: "main", sha: "abc",
@@ -222,7 +222,7 @@ final class GitHubServiceTests: XCTestCase {
 
     func test_fetchJobSummary_allComplete() async throws {
         MockURLProtocol.stub(json: """
-        {"jobs":[{"status":"completed","conclusion":"success"},{"status":"completed","conclusion":"success"}]}
+        {"jobs":[{"id":1,"name":"a","status":"completed","conclusion":"success"},{"id":2,"name":"b","status":"completed","conclusion":"success"}]}
         """)
         let pipeline = Pipeline(id: 1, status: .running, ref: "main", sha: "abc",
                                 webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
@@ -242,6 +242,98 @@ final class GitHubServiceTests: XCTestCase {
         let summary = try await service.fetchJobSummary(for: pipeline, project: project)
         XCTAssertEqual(summary.total, 0)
         XCTAssertEqual(summary.label, "")
+    }
+
+    // MARK: - fetchSteps
+
+    func test_fetchSteps_mapsJobsWithStatusAndConclusion() async throws {
+        MockURLProtocol.stub(json: """
+        {"jobs":[
+          {"id":1,"name":"build","status":"completed","conclusion":"success","html_url":"https://x.com/1"},
+          {"id":2,"name":"deploy","status":"in_progress","conclusion":null,"html_url":"https://x.com/2"},
+          {"id":3,"name":"optional-check","status":"completed","conclusion":"skipped","html_url":"https://x.com/3"}
+        ]}
+        """)
+        let pipeline = Pipeline(id: 9, status: .running, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "r", nameWithNamespace: "o/r", pathWithNamespace: "o/r")
+        let steps = try await service.fetchSteps(for: pipeline, project: project)
+        XCTAssertEqual(steps.count, 3)
+        XCTAssertEqual(steps[0].status, .success)
+        XCTAssertNil(steps[0].stage)               // GitHub has no stage grouping
+        XCTAssertEqual(steps[1].status, .running)
+        XCTAssertTrue(steps[2].isOptional)         // skipped → optional
+        XCTAssertEqual(steps[2].status, .skipped)
+    }
+
+    // MARK: - re-run
+
+    func test_rerunFailed_postsToRerunFailedJobs() async throws {
+        var capturedURL: URL?
+        var capturedMethod: String?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            capturedMethod = req.httpMethod
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!
+            return (resp, Data())
+        }
+        let pipeline = Pipeline(id: 55, status: .failed, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "r", nameWithNamespace: "o/r", pathWithNamespace: "octo/repo")
+        try await service.rerunFailed(pipeline: pipeline, project: project)
+        XCTAssertEqual(capturedMethod, "POST")
+        XCTAssertTrue(capturedURL?.absoluteString.hasSuffix("/repos/octo/repo/actions/runs/55/rerun-failed-jobs") ?? false)
+    }
+
+    func test_rerunAll_postsToRerun() async throws {
+        var capturedURL: URL?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!
+            return (resp, Data())
+        }
+        let pipeline = Pipeline(id: 55, status: .success, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "r", nameWithNamespace: "o/r", pathWithNamespace: "octo/repo")
+        try await service.rerunAll(pipeline: pipeline, project: project)
+        XCTAssertTrue(capturedURL?.absoluteString.hasSuffix("/repos/octo/repo/actions/runs/55/rerun") ?? false)
+    }
+
+    func test_rerunStep_postsToJobRerun() async throws {
+        var capturedURL: URL?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 201, httpVersion: nil, headerFields: nil)!
+            return (resp, Data())
+        }
+        let pipeline = Pipeline(id: 55, status: .failed, ref: "main", sha: "abc",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "r", nameWithNamespace: "o/r", pathWithNamespace: "octo/repo")
+        try await service.rerunStep(stepId: 88, pipeline: pipeline, project: project)
+        XCTAssertTrue(capturedURL?.absoluteString.hasSuffix("/repos/octo/repo/actions/jobs/88/rerun") ?? false)
+    }
+
+    func test_rerun_unauthorized_throws() async {
+        MockURLProtocol.stub(statusCode: 403, json: "{}")
+        let pipeline = Pipeline(id: 1, status: .failed, ref: "m", sha: "s",
+                                webUrl: "https://x.com", createdAt: Date(), updatedAt: Date())
+        let project = GitLabProject(id: 1, name: "r", nameWithNamespace: "o/r", pathWithNamespace: "o/r")
+        do { try await service.rerunFailed(pipeline: pipeline, project: project); XCTFail("Expected error") }
+        catch GitLabError.unauthorized { } catch { XCTFail("Unexpected: \(error)") }
+    }
+
+    func test_paginatedFetch_includesPageParam() async throws {
+        var capturedURL: URL?
+        MockURLProtocol.requestHandler = { req in
+            capturedURL = req.url
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (resp, Data("{\"workflow_runs\":[]}".utf8))
+        }
+        let project = GitLabProject(id: 1, name: "r", nameWithNamespace: "o/r", pathWithNamespace: "o/r")
+        _ = try await service.fetchPipelines(for: project, page: 3, perPage: 25)
+        let s = capturedURL?.absoluteString ?? ""
+        XCTAssertTrue(s.contains("page=3"))
+        XCTAssertTrue(s.contains("per_page=25"))
     }
 
     // MARK: - Error handling
