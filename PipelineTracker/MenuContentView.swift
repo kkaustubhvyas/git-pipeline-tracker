@@ -51,7 +51,7 @@ struct MenuContentView: View {
             }
 
             sortMenu
-            iconButton("arrow.clockwise", help: "Refresh now") { monitor.refresh() }
+            iconButton("arrow.clockwise", help: "Refresh now") { monitor.refresh(manual: true) }
                 .disabled(monitor.isRefreshing)
         }
         .padding(.horizontal, Theme.md)

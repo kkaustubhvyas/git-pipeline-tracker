@@ -49,10 +49,20 @@ final class PipelineMonitor: ObservableObject {
         }
     }
 
+    // Auth failure backoff: after the initial failure + `maxAuthRetries` retries,
+    // the account is paused and excluded from periodic refresh until the token
+    // is updated or a manual refresh is triggered.
+    @Published var pausedAccounts: Set<UUID> = []
+    private var authFailureCounts: [UUID: Int] = [:]
+    private let maxAuthRetries = 2
+
     private var services: [UUID: any PipelineProvider] = [:]
     private var knownStatuses: [Int: PipelineStatus] = [:]
     private var knownPipelineIds: Set<Int> = []
-    private var isFirstLoad = true
+    /// When each (account, project) was first fetched successfully. Notifications are
+    /// suppressed until a baseline exists, so a failed first poll (e.g. no network at
+    /// login) doesn't make every pipeline look "new" on the next successful one.
+    private var baselines: [String: Date] = [:]
     private var pollingTimer: Timer?
 
     init() {
@@ -88,6 +98,8 @@ final class PipelineMonitor: ObservableObject {
             catch { print("Keychain save error: \(error)") }
             services[updated.id] = makeService(token: token, account: updated)
             accountErrors.removeValue(forKey: updated.id)
+            authFailureCounts.removeValue(forKey: updated.id)
+            pausedAccounts.remove(updated.id)
         }
         persistAccounts()
     }
@@ -99,6 +111,8 @@ final class PipelineMonitor: ObservableObject {
         projects.removeValue(forKey: account.id)
         pipelines.removeValue(forKey: account.id)
         accountErrors.removeValue(forKey: account.id)
+        authFailureCounts.removeValue(forKey: account.id)
+        pausedAccounts.remove(account.id)
         persistAccounts()
         persistProjects()
     }
@@ -173,8 +187,13 @@ final class PipelineMonitor: ObservableObject {
         scheduleTimer()
     }
 
-    func refresh() {
+    func refresh(manual: Bool = false) {
         guard !accounts.isEmpty else { return }
+        if manual {
+            // Manual refresh retries paused accounts from a clean slate.
+            pausedAccounts.removeAll()
+            authFailureCounts.removeAll()
+        }
         Task { await performRefresh() }
     }
 
@@ -185,6 +204,7 @@ final class PipelineMonitor: ObservableObject {
         await withTaskGroup(of: Void.self) { group in
             for account in accounts {
                 guard !account.watchedProjectIds.isEmpty else { continue }
+                guard !pausedAccounts.contains(account.id) else { continue }
                 // Auto-load projects if cache is empty
                 if projects[account.id]?.isEmpty ?? true {
                     group.addTask { [weak self] in await self?.loadProjects(for: account) }
@@ -193,7 +213,6 @@ final class PipelineMonitor: ObservableObject {
             }
         }
 
-        isFirstLoad = false
         lastRefresh = Date()
     }
 
@@ -223,17 +242,22 @@ final class PipelineMonitor: ObservableObject {
                     batch[i].projectName = batch[i].projectName.isEmpty ? project.name : batch[i].projectName
                     batch[i].accountId = account.id
                 }
-                if !isFirstLoad {
+                let baselineKey = "\(account.id.uuidString)-\(projectId)"
+                if let baseline = baselines[baselineKey] {
                     for p in batch {
                         let passesFilter = account.filter(for: p.projectId).matches(ref: p.ref)
                         if let prev = knownStatuses[p.id] {
                             if prev != p.status && passesFilter {
                                 NotificationManager.shared.notifyPipelineChange(pipeline: p, accountName: account.name)
                             }
-                        } else if !knownPipelineIds.contains(p.id) && passesFilter {
+                        } else if !knownPipelineIds.contains(p.id) && passesFilter
+                                    // Older pipelines surfacing via "Show more" / larger page size aren't new.
+                                    && p.createdAt >= baseline.addingTimeInterval(-60) {
                             NotificationManager.shared.notifyNewPipeline(pipeline: p, accountName: account.name)
                         }
                     }
+                } else {
+                    baselines[baselineKey] = Date()
                 }
                 for p in batch {
                     knownStatuses[p.id] = p.status
@@ -241,8 +265,7 @@ final class PipelineMonitor: ObservableObject {
                 }
                 collected.append(contentsOf: batch)
             } catch GitLabError.unauthorized {
-                accountErrors[account.id] = "Token expired or invalid"
-                NotificationManager.shared.notifyTokenExpired(accountName: account.name)
+                handleUnauthorized(account)
                 return
             } catch {
                 // Don't overwrite an auth error with a transient network error
@@ -254,11 +277,12 @@ final class PipelineMonitor: ObservableObject {
 
         hasMore[account.id] = anyProjectHasMore
 
-        if isFirstLoad {
-            for p in collected { knownPipelineIds.insert(p.id) }
-        }
-        if accountErrors[account.id] != "Token expired or invalid" {
+        if let error = accountErrors[account.id], isTokenError(error) {
+            // Keep the auth error visible (it may have come from loadProjects).
+        } else {
             accountErrors.removeValue(forKey: account.id)
+            authFailureCounts.removeValue(forKey: account.id)
+            pausedAccounts.remove(account.id)
         }
         pipelines[account.id] = collected.sorted { $0.updatedAt > $1.updatedAt }
 
@@ -266,6 +290,11 @@ final class PipelineMonitor: ObservableObject {
         let activeIds = Set(collected.filter { $0.status.isActive }.map { $0.id })
         for id in jobSummaries.keys where !activeIds.contains(id) {
             jobSummaries.removeValue(forKey: id)
+        }
+
+        // Keep expanded step lists fresh on each poll.
+        for p in collected where expandedPipelines.contains(p.id) {
+            loadSteps(for: p)
         }
 
         // Fetch job summaries for active pipelines in parallel
@@ -298,11 +327,35 @@ final class PipelineMonitor: ObservableObject {
             accountErrors.removeValue(forKey: account.id)
             persistProjects()
         } catch GitLabError.unauthorized {
-            accountErrors[account.id] = "Token expired or invalid"
-            NotificationManager.shared.notifyTokenExpired(accountName: account.name)
+            handleUnauthorized(account)
         } catch {
             accountErrors[account.id] = error.localizedDescription
         }
+    }
+
+    // MARK: - Auth failure backoff
+
+    /// Notify once on the first auth failure; after `maxAuthRetries` further
+    /// failed polls, pause periodic refresh for the account (one final
+    /// notification) instead of spamming on every poll cycle.
+    private func handleUnauthorized(_ account: Account) {
+        let failures = (authFailureCounts[account.id] ?? 0) + 1
+        authFailureCounts[account.id] = failures
+
+        if failures > maxAuthRetries {
+            pausedAccounts.insert(account.id)
+            accountErrors[account.id] = "Token expired — auto-refresh paused"
+            NotificationManager.shared.notifyAccountPaused(accountName: account.name)
+        } else {
+            accountErrors[account.id] = "Token expired or invalid"
+            if failures == 1 {
+                NotificationManager.shared.notifyTokenExpired(accountName: account.name)
+            }
+        }
+    }
+
+    private func isTokenError(_ message: String) -> Bool {
+        message == "Token expired or invalid" || message == "Token expired — auto-refresh paused"
     }
 
     // MARK: - Pagination

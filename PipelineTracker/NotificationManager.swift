@@ -84,6 +84,15 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         post(id: "token-expired-\(accountName)", content: content)
     }
 
+    func notifyAccountPaused(accountName: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "⏸ Auto-Refresh Paused"
+        content.body = "Account '\(accountName)' — token still invalid after retries. Monitoring is paused until you update the token in Settings or refresh manually."
+        content.sound = .default
+        attach(symbol: "pause.circle.fill", color: .systemOrange, to: content)
+        post(id: "account-paused-\(accountName)", content: content)
+    }
+
     private func post(id: String, content: UNMutableNotificationContent) {
         let req = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(req)
